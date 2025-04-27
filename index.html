@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pending NSC: Malda Zone</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Google Fonts - Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+  <style>
+    :root {
+      --primary: #4361ee;
+      --secondary: #3f37c9;
+      --success: #4cc9f0;
+      --info: #4895ef;
+      --warning: #f72585;
+      --danger: #ff006e;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gradient-1: linear-gradient(to right, #4cc9f0, #4361ee);
+      --gradient-2: linear-gradient(to right, #f72585, #ff006e);
+      --gradient-3: linear-gradient(to right, #3f37c9, #4361ee);
+      --gradient-4: linear-gradient(to right, #b5179e, #f72585);
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f0f2f5;
+      color: var(--dark);
+    }
+    
+    .dashboard-header {
+      background: var(--gradient-1);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 15px;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 20px rgba(67, 97, 238, 0.2);
+    }
+    
+    .dashboard-header h2 {
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      font-size: 1.5rem; 
+    }
+    
+    .card {
+      border-radius: 15px;
+      border: none;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    }
+    
+    .card .card-body {
+      padding: 1.5rem;
+    }
+    
+    .kpi-card-1 {
+      background: var(--gradient-1);
+      color: white;
+    }
+    
+    .kpi-card-2 {
+      background: var(--gradient-2);
+      color: white;
+    }
+    
+    .kpi-card-3 {
+      background: var(--gradient-3);
+      color: white;
+    }
+    
+    .kpi-card-4 {
+      background: var(--gradient-4);
+      color: white;
+    }
+    
+    .kpi-card-count {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    
+    .kpi-card-label {
+      font-size: 1rem;
+      opacity: 0.9;
+      font-weight: 400;
+      margin: 0;
+    }
+    
+    .kpi-card-icon {
+      position: absolute;
+      top: 1.2rem;
+      right: 1.2rem;
+      font-size: 1.8rem;
+      opacity: 0.5;
+    }
+    
+    .filter-card {
+      background-color: white;
+      border-radius: 15px;
+      padding: 1.0rem;
+      margin-bottom: 1.5rem;
+      height: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .filter-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--dark);
+    }
+    
+    .form-select {
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e0e0e0;
+      font-size: 0.9rem;
+    }
+    
+    .form-select:focus {
+      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+      border-color: var(--primary);
+    }
+    
+    .nav-pills {
+      background-color: white;
+      border-radius: 12px;
+      padding: 0.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 1.5rem;
+    }
+    
+    .nav-pills .nav-link {
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-weight: 500;
+      color: #555;
+      margin: 0 0.2rem;
+    }
+    
+    .nav-pills .nav-link.active {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 350px;
+      background-color: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+      overflow-y: auto; /* <-- Add this */
+      scrollbar-width: thin; /* for Firefox */
+    }
+    .chart-container::-webkit-scrollbar {
+  width: 6px; /* thin scrollbar for Chrome/Safari */
+}
+
+.chart-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+    .detail-table {
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .detail-table .table {
+      margin-bottom: 0;
+    }
+    
+    .detail-table thead {
+      background-color: #eef2ff;
+    }
+    
+    .detail-table th {
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      padding: 1rem;
+      border: none;
+    }
+    
+    .detail-table td {
+      padding: 1rem;
+      border-color: #eef2ff;
+      vertical-align: middle;
+    }
+    
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      color: var(--dark);
+      position: relative;
+      padding-left: 1rem;
+    }
+    
+    .section-title::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 4px;
+      background: var(--gradient-1);
+      border-radius: 4px;
+    }
+    
+    /* Animation for loading */
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 0.8; }
+      100% { opacity: 0.6; }
+    }
+    
+    .loading {
+      animation: pulse 1.5s infinite;
+      background: #eee;
+      border-radius: 8px;
+      height: 1.2rem;
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+
+<body class="p-4">
+  <div class="container-fluid">
+
+    <!-- Dashboard Header -->
+    <div class="dashboard-header mb-4">
+      <h2><i class="fas fa-tachometer-alt me-2"></i> Pending NSC: Malda Zone</h2>
+    </div>
+    
+    <!-- Filters Row -->
+    <div class="filter-card">
+      <div class="filter-title"><i class="fas fa-filter me-2"></i>Filters</div>
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <select id="regionSelect" class="form-select">
+            <option value="">Select Region</option>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <select id="divnSelect" class="form-select">
+            <option value="">Select Division</option>
+          </select>
+        </div>
+        <div class="col-md-4 mb-3">
+          <select id="suppSelect" class="form-select">
+            <option value="">Select CCC</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+<!-- Average Delay Group - Compact Version -->
+<div class="card p-3 mb-4" style="background-color: #f1f5ff; border-radius: 15px;">
+    <h6 class="mb-3 text-center" style="color: #4361ee; font-size: 1rem;">Average Delay Summary</h6>
+    <div class="row">
+      <div class="col-md-4 mb-2">
+        <div class="card text-center shadow-sm" style="background-color: #e3f2fd; border-radius: 12px;">
+          <div class="card-body p-2">
+            <div style="font-size: 0.8rem; font-weight: 500; color: #555;">Avg Delay for Quotation</div>
+            <div style="font-size: 1.4rem; font-weight: 700;" id="avgDelayQtn">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-2">
+        <div class="card text-center shadow-sm" style="background-color: #e3f2fd; border-radius: 12px;">
+          <div class="card-body p-2">
+            <div style="font-size: 0.8rem; font-weight: 500; color: #555;">Avg Delay for WO</div>
+            <div style="font-size: 1.4rem; font-weight: 700;" id="avgDelayWO">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-2">
+        <div class="card text-center shadow-sm" style="background-color: #e3f2fd; border-radius: 12px;">
+          <div class="card-body p-2">
+            <div style="font-size: 0.8rem; font-weight: 500; color: #555;">Avg Delay for Connection</div>
+            <div style="font-size: 1.4rem; font-weight: 700;" id="avgDelaySC">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+    <!-- KPI Cards Row -->
+    <div class="row mb-4">
+
+        <!-- Total Pending Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card kpi-card-1" id="totalPendingCard" style="cursor:pointer;">
+            <div class="card-body position-relative">
+              <i class="fas fa-clock kpi-card-icon"></i>
+              <h2 class="kpi-card-count" id="totalPending">0</h2>
+              <p class="kpi-card-label">Total Pending</p>
+            </div>
+            <div class="collapse" id="totalPendingCollapse">
+              <div class="card detail-table" id="totalPendingTableContainer"></div>
+            </div>
+          </div>
+        </div>
+      
+        <!-- Non Pole Cases Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card kpi-card-2" id="nonPoleCard" style="cursor:pointer;">
+            <div class="card-body position-relative">
+              <i class="fas fa-home kpi-card-icon"></i>
+              <h2 class="kpi-card-count" id="nonPole">0</h2>
+              <p class="kpi-card-label">Non Pole Cases</p>
+            </div>
+            <div class="collapse" id="nonPoleCollapse">
+              <div class="card detail-table" id="nonPoleTableContainer"></div>
+            </div>
+          </div>
+        </div>
+      
+        <!-- Pole Cases Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card kpi-card-3" id="poleCard" style="cursor:pointer;">
+            <div class="card-body position-relative">
+                <i class="fas fa-bolt kpi-card-icon"></i>
+              <h2 class="kpi-card-count" id="pole">0</h2>
+              <p class="kpi-card-label">Pole Cases</p>
+            </div>
+            <div class="collapse" id="poleCollapse">
+              <div class="card detail-table" id="poleTableContainer"></div>
+            </div>
+          </div>
+        </div>
+      
+        <!-- Industrial Pending Card -->
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card kpi-card-4" id="industrialPendingCard" style="cursor:pointer;">
+            <div class="card-body position-relative">
+              <i class="fas fa-industry kpi-card-icon"></i>
+              <h2 class="kpi-card-count" id="industrialPending">0</h2>
+              <p class="kpi-card-label">Industrial Pending</p>
+            </div>
+            <div class="collapse" id="industrialPendingCollapse">
+              <div class="card detail-table" id="industrialPendingTableContainer"></div>
+            </div>
+          </div>
+        </div>
+      
+      </div>
+      
+
+      
+<!-- Shared collapse for desktop view -->
+<div class="collapse mb-4" id="detailCollapse">
+    <div class="card detail-table" id="detailTableContainer"></div>
+  </div>
+  
+    <!-- Detailed Analysis Section -->
+    <h2 class="section-title mb-4">Detailed Analysis</h2>
+    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="delay-tab" data-bs-toggle="pill" data-bs-target="#delay" type="button" role="tab">
+          <i class="fas fa-hourglass-half me-2"></i>Delay Range
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pole-tab" data-bs-toggle="pill" data-bs-target="#pole-data" type="button" role="tab">
+          <i class="fas fa-bolt me-2"></i>Pole/Non-Pole
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="duare-tab" data-bs-toggle="pill" data-bs-target="#duare" type="button" role="tab">
+          <i class="fas fa-home me-2"></i>Duare Sarkar
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="wo-tab" data-bs-toggle="pill" data-bs-target="#wo" type="button" role="tab">
+          <i class="fas fa-file-contract me-2"></i>WO Status
+        </button>
+      </li>
+
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="classwise-tab" data-bs-toggle="pill" data-bs-target="#classwise" type="button" role="tab">
+          <i class="fas fa-layer-group me-2"></i>Class Wise
+        </button>
+      </li>
+      
+    </ul>
+    
+    <div class="tab-content" id="pills-tabContent">
+      <div class="tab-pane fade show active" id="delay" role="tabpanel">
+        <div class="chart-container">
+          <canvas id="delayChart"></canvas>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="pole-data" role="tabpanel">
+        <div class="chart-container">
+          <canvas id="poleChart"></canvas>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="duare" role="tabpanel">
+        <div class="chart-container">
+          <canvas id="duareChart"></canvas>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="wo" role="tabpanel">
+        <div class="chart-container">
+          <canvas id="woChart"></canvas>
+        </div>
+      </div>
+      <div class="tab-pane fade" id="classwise" role="tabpanel">
+        <div class="chart-container">
+          <canvas id="classwiseChart"></canvas> <!-- placeholder -->
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Data URL
+    const dataUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRsUU2viBvYhSgR0RFwmZ1H8LkYCats9roQVCKvQeoU7dzg6ryR6IWZex9FT9tksp_DEM23ZgQ28Iyo/pub?gid=842062112&single=true&output=csv";
+    let rawData = [], filteredData = [];
+    let charts = {};
+
+    // Helper function to safely parse CSV data
+    function parseCsvRow(row, headers) {
+      const obj = {};
+      row.forEach((val, idx) => {
+        if (idx < headers.length) {
+          obj[headers[idx]] = val;
+        }
+      });
+      return obj;
+    }
+
+    // Fetch and process data
+    async function fetchData() {
+      try {
+        showLoading(true);
+        const res = await fetch(dataUrl);
+        const text = await res.text();
+        const parsed = Papa.parse(text.trim(), {
+  header: true,
+  skipEmptyLines: true
+});
+rawData = parsed.data;
+filteredData = [...rawData];
+
+        
+        populateFilters();
+        updateDashboard();
+        drawTables(); // instead of drawCharts();
+        showLoading(false);
+      } catch (error) {
+        console.error("Error loading data:", error);
+        document.getElementById('totalPending').innerText = "Error";
+        alert("Failed to load data. Please check your internet connection and try again.");
+        showLoading(false);
+      }
+
+      
+    }
+
+    // Show/hide loading indicators
+    function showLoading(isLoading) {
+      const elements = ['totalPending', 'nonPole', 'pole', 'industrialPending'];
+      elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (isLoading) {
+          el.innerHTML = '<div class="loading"></div>';
+        }
+      });
+    }
+
+    // Populate filter dropdowns with unique values
+    function populateFilters() {
+  const region = document.getElementById('regionSelect').value;
+  const divn = document.getElementById('divnSelect').value;
+
+  // Unique helper
+  const unique = (arr, key) => {
+    return [...new Set(arr.map(x => x[key]).filter(Boolean).map(v => v.trim()))].sort();
+  };
+
+  // First populate Region normally from rawData
+  const regions = unique(rawData, 'REGION');
+  const regionSelect = document.getElementById('regionSelect');
+  const previousRegion = regionSelect.value;
+  regionSelect.innerHTML = `<option value="">Select Region</option>`;
+  regions.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r;
+    opt.textContent = r;
+    if (r === previousRegion) opt.selected = true;
+    regionSelect.appendChild(opt);
+  });
+
+  // Populate Division based on selected Region
+  let divns = rawData;
+  if (region) {
+    divns = rawData.filter(d => d.REGION === region);
+  }
+  const divisions = unique(divns, 'DIVN_NAME');
+  const divnSelect = document.getElementById('divnSelect');
+  const previousDivn = divnSelect.value;
+  divnSelect.innerHTML = `<option value="">Select Division</option>`;
+  divisions.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    if (d === previousDivn) opt.selected = true;
+    divnSelect.appendChild(opt);
+  });
+
+  // Populate Office based on selected Division
+  let supps = rawData;
+  if (divn) {
+    supps = rawData.filter(d => d.DIVN_NAME === divn);
+  } else if (region) {
+    supps = rawData.filter(d => d.REGION === region);
+  }
+  const offices = unique(supps, 'SUPP_OFF');
+  const suppSelect = document.getElementById('suppSelect');
+  const previousSupp = suppSelect.value;
+  suppSelect.innerHTML = `<option value="">Select CCC</option>`;
+  offices.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    if (s === previousSupp) opt.selected = true;
+    suppSelect.appendChild(opt);
+  });
+}
+
+function applyFilters() {
+  const region = document.getElementById('regionSelect').value;
+  const divn = document.getElementById('divnSelect').value;
+  const supp = document.getElementById('suppSelect').value;
+
+  filteredData = rawData.filter(d => 
+    (region === "" || d.REGION === region) &&
+    (divn === "" || d.DIVN_NAME === divn) &&
+    (supp === "" || d.SUPP_OFF === supp)
+  );
+
+  populateFilters(filteredData); // <- repopulate based on filtered
+  updateDashboard();
+  drawTables();
+
+}
+
+
+    // Add option to select element
+    function addOption(id, value) {
+      const sel = document.getElementById(id);
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = value;
+      sel.appendChild(opt);
+    }
+
+    // Update dashboard with filtered data
+    function updateDashboard() {
+      // Debug logging for CONN_CLASS values
+      console.log("CONN_CLASS values sample:", 
+        filteredData.slice(0, 10).map(d => ({
+          original: d.CONN_CLASS,
+          normalized: (d.CONN_CLASS || "").trim().toUpperCase()
+        }))
+      );
+      
+      // Total Pending count
+      document.getElementById('totalPending').textContent = filteredData.length;
+
+      // Non Pole Case count (where NO_OF_POLES is blank or null or 0)
+      const nonPoleCases = filteredData.filter(d => {
+        const poles = d.NO_OF_POLES || "";  
+        return poles.trim() === "" || poles === "0";
+      }).length;
+
+      // Pole Case count (where NO_OF_POLES has value greater than 0)
+      const poleCases = filteredData.filter(d => {
+        const poles = d.NO_OF_POLES || "";
+        return poles.trim() !== "" && poles !== "0";
+      }).length;
+
+      var temp = 0;
+      var temp2 = 0;
+      var temp3 = [];
+      // Industrial Pending count (where CONN_CLASS is exactly "I")
+      const industrialPending = filteredData.filter(d => {
+        const connClass = (d.CONN_CLASS || "").trim().toUpperCase();
+        //console.log(connClass, d.CONN_CLASS, connClass === "I");
+        if (connClass === "I") {
+          temp++;
+          console.log(d);
+          temp3.push(d.APPL_NO);
+        }else{
+            temp2++;
+        }
+        return connClass === "I";
+      }).length;
+      console.log(filteredData);
+      console.log(temp, temp2); 
+      console.log(temp3);
+      console.log((new Set(temp3)).size);
+
+
+      console.log(industrialPending);
+      console.log(filteredData);
+
+
+      // Update the counts
+      document.getElementById('nonPole').textContent = nonPoleCases;
+      document.getElementById('pole').textContent = poleCases;
+      document.getElementById('industrialPending').textContent = industrialPending;
+
+      // Calculate averages for delays
+function average(arr, key) {
+  const nums = arr.map(d => parseFloat(d[key]) || 0).filter(n => n > 0);
+  if (nums.length === 0) return 0;
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return (sum / nums.length).toFixed(1);
+}
+
+document.getElementById('avgDelayQtn').textContent = average(filteredData, 'DelayInQtn');
+document.getElementById('avgDelayWO').textContent = average(filteredData, 'DelayInWO');
+document.getElementById('avgDelaySC').textContent = average(filteredData, 'DelayInSC');
+
+    }
+
+    // Show detailed table for selected filter
+    function showTable(cardId, groupBy, filterFn, title) {
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    const collapseId = cardId.replace('Card', 'Collapse');
+    const tableContainerId = cardId.replace('Card', 'TableContainer');
+    const collapseElement = document.getElementById(collapseId);
+    const tableContainer = document.getElementById(tableContainerId);
+    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement);
+
+    const isCurrentlyOpen = collapseElement.classList.contains('show');
+
+    if (isCurrentlyOpen) {
+      // If already open, collapse (no need to refill table)
+      bsCollapse.hide();
+    } else {
+      // Always fill table freshly before showing
+      fillTable(tableContainer, groupBy, filterFn, title);
+
+      // Close other mobile collapses
+      ['totalPendingCollapse', 'nonPoleCollapse', 'poleCollapse', 'industrialPendingCollapse'].forEach(id => {
+        if (id !== collapseId) {
+          const el = document.getElementById(id);
+          if (el && el.classList.contains('show')) {
+            bootstrap.Collapse.getInstance(el).hide();
+          }
+        }
+      });
+
+      // Open the clicked one
+      setTimeout(() => {
+        bsCollapse.show();
+      }, 10);
+    }
+
+  } else {
+    // Desktop behavior: shared table at bottom
+    const collapseElement = document.getElementById('detailCollapse');
+    const tableContainer = document.getElementById('detailTableContainer');
+    const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseElement);
+
+    const isCurrentlyOpen = collapseElement.classList.contains('show');
+
+    if (isCurrentlyOpen) {
+      // If already open and clicking same card, collapse
+      bsCollapse.hide();
+    } else {
+      fillTable(tableContainer, groupBy, filterFn, title);
+      setTimeout(() => {
+        bsCollapse.show();
+      }, 10);
+    }
+  }
+}
+
+
+
+function fillTable(tableContainer, groupBy, filterFn, title) {
+  const grouped = {};
+  const filteredRecords = filteredData.filter(filterFn);
+
+  if (filteredRecords.length === 0) {
+    tableContainer.innerHTML = `
+      <div class="card-body text-center p-5">
+        <i class="fas fa-info-circle fa-3x mb-3 text-muted"></i>
+        <h4>No Data Available</h4>
+        <p class="text-muted">There are no records matching the selected filters.</p>
+      </div>`;
+    return;
+  }
+
+  filteredRecords.forEach(d => {
+    const key = d[groupBy] || 'Unknown';
+    grouped[key] = (grouped[key] || 0) + 1;
+  });
+
+  const sortedKeys = Object.keys(grouped).sort((a, b) => grouped[b] - grouped[a]);
+
+  let html = `
+    <div class="card-header bg-white py-3">
+      <h5 class="mb-0"><i class="fas fa-table me-2"></i>${title} by ${groupBy.replace('_', ' ')}</h5>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>${groupBy.replace('_', ' ')}</th>
+            <th class="text-end">Count</th>
+            <th class="text-end">Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  const total = filteredRecords.length;
+  for (const key of sortedKeys) {
+    const count = grouped[key];
+    const percentage = ((count / total) * 100).toFixed(1);
+    html += `
+      <tr>
+        <td>${key}</td>
+        <td class="text-end">${count}</td>
+        <td class="text-end">${percentage}%</td>
+      </tr>
+    `;
+  }
+
+  html += "</tbody></table></div>";
+  tableContainer.innerHTML = html;
+}
+
+
+
+document.getElementById('totalPendingCard').onclick = () => 
+  showTable('totalPendingCard', 'DIVN_NAME', d => true, 'Total Pending');
+
+document.getElementById('nonPoleCard').onclick = () => 
+  showTable('nonPoleCard', 'DIVN_NAME', d => {
+    const poles = d.NO_OF_POLES || "";
+    return poles.trim() === "" || poles === "0";
+  }, 'Non-Pole Cases');
+
+document.getElementById('poleCard').onclick = () => 
+  showTable('poleCard', 'DIVN_NAME', d => {
+    const poles = d.NO_OF_POLES || "";
+    return poles.trim() !== "" && poles !== "0";
+  }, 'Pole Cases');
+
+document.getElementById('industrialPendingCard').onclick = () => 
+  showTable('industrialPendingCard', 'SUPP_OFF', d => {
+    const connClass = (d.CONN_CLASS || "").trim().toUpperCase();
+    return connClass === "I";
+  }, 'Industrial Cases');
+
+    // Filter change event handler
+    document.getElementById('regionSelect').onchange = applyFilters;
+document.getElementById('divnSelect').onchange = applyFilters;
+document.getElementById('suppSelect').onchange = applyFilters;
+
+
+    // Draw charts for data visualization
+    function drawTables() {
+  const chartColors = { }; // no longer needed but keeping for future if styles needed
+  
+  const groupData = (key, defaultValue = 'Not Specified') => {
+    const map = {};
+    filteredData.forEach(d => {
+      let value = d[key];
+      if (!value || value.trim() === '') {
+        value = defaultValue;
+      }
+      map[value] = (map[value] || 0) + 1;
+    });
+    return map;
+  };
+  
+  const delayMap = {};
+  filteredData.forEach(d => {
+    const range = d.DelayRange || 'No Delay Data';
+    const serial = parseInt(d.DelaySerial) || 0;
+    if (!delayMap[range]) {
+      delayMap[range] = { count: 0, serial: serial };
+    }
+    delayMap[range].count++;
+  });
+  const sortedDelay = Object.entries(delayMap)
+    .sort((a, b) => b[1].serial - a[1].serial);
+
+  const poleData = {
+    'Pole Cases': filteredData.filter(d => (d.NO_OF_POLES || "").trim() !== "" && (d.NO_OF_POLES !== "0")).length,
+    'Non-Pole Cases': filteredData.filter(d => (d.NO_OF_POLES || "").trim() === "" || (d.NO_OF_POLES === "0")).length
+  };
+
+  const duareData = groupData('IS_DUARE_SARKAR', 'Not Specified');
+  const woData = groupData('WO_ISSUED', 'Not Issued');
+
+  const classData = groupData('CONN_CLASS', 'Not Specified');
+
+
+
+  // Helper to generate HTML table
+  const generateTable = (dataObj, header1, header2) => {
+  const total = Object.values(dataObj).reduce((sum, val) => sum + val, 0);
+
+  let html = `
+    <div class="table-responsive">
+      <table class="table table-hover table-striped">
+        <thead>
+          <tr>
+            <th>${header1}</th>
+            <th class="text-end">${header2}</th>
+            <th class="text-end">Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  for (const [key, value] of Object.entries(dataObj)) {
+    const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+    html += `
+      <tr>
+        <td>${key}</td>
+        <td class="text-end">${value}</td>
+        <td class="text-end">${percent}%</td>
+      </tr>
+    `;
+  }
+
+  html += `</tbody></table></div>`;
+  return html;
+};
+
+
+  // Insert tables into respective containers
+  document.getElementById('delay').querySelector('.chart-container').innerHTML = generateTable(
+    Object.fromEntries(sortedDelay.map(([k,v]) => [k, v.count])), 
+    'Delay Range', 
+    'Count'
+  );
+
+  document.getElementById('pole-data').querySelector('.chart-container').innerHTML = generateTable(
+    poleData,
+    'Type',
+    'Count'
+  );
+
+  document.getElementById('duare').querySelector('.chart-container').innerHTML = generateTable(
+    duareData,
+    'Duare Sarkar',
+    'Count'
+  );
+
+  document.getElementById('wo').querySelector('.chart-container').innerHTML = generateTable(
+    woData,
+    'WO Issued Status',
+    'Count'
+  );
+
+  document.getElementById('classwise').querySelector('.chart-container').innerHTML = generateTable(
+  classData,
+  'Connection Class',
+  'Count'
+);
+}
+
+    
+    document.addEventListener('DOMContentLoaded', () => {
+  ['totalPendingCollapse', 'nonPoleCollapse', 'poleCollapse', 'industrialPendingCollapse', 'detailCollapse'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('show');
+    }
+  });
+});
+
+    // Initialize the dashboard
+    fetchData();
+  </script>
+</body>
+</html>
