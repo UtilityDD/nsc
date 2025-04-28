@@ -34,7 +34,20 @@
       --gradient-3: linear-gradient(to right, #3f37c9, #4361ee);
       --gradient-4: linear-gradient(to right, #b5179e, #f72585);
     }
-    
+
+
+  body {
+    padding: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    body {
+      padding: 0.2rem;
+    }
+  }
+
+
+
     body {
       font-family: 'Poppins', sans-serif;
       background-color: #f0f2f5;
@@ -167,7 +180,7 @@
     
     .chart-container {
       position: relative;
-      height: 350px;
+      height: 550px;
       background-color: white;
       border-radius: 15px;
       padding: 1.5rem;
@@ -246,17 +259,56 @@
       height: 1.2rem;
       margin: 0.5rem 0;
     }
+    <style>
+.blinking-link {
+  animation: blinkAnimation 2s infinite;
+}
+
+@keyframes blinkAnimation {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+.sub-row table {
+  background: #f8f9fa;
+  border-left: 4px solid #4361ee;
+  margin: 0.5rem 1rem; /* Add margin to left/right */
+  width: auto; /* don't force full width */
+  font-size: 0.85rem; /* smaller font */
+  border-radius: 8px;
+  overflow: hidden;
+}
+.sub-row td, .sub-row th {
+  padding: 0.4rem 0.6rem; /* smaller padding */
+  white-space: nowrap;
+}
+
+.sub-row > td > div {
+  overflow-x: auto;
+  padding: 0.5rem 1rem; /* add padding inside the div */
+}
+  .sub-row > td > div {
+  overflow-x: auto;
+  padding: 0.5rem 1rem; /* Add inner padding too */
+}
+
+  .sub-row table thead th {
+    background-color: #e3f2fd;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
   </style>
 </head>
 
-<body class="p-4">
+<body>
   <div class="container-fluid">
 
     <!-- Dashboard Header -->
-    <div class="dashboard-header mb-4">
-      <h2><i class="fas fa-tachometer-alt me-2"></i> Pending NSC: Malda Zone</h2>
-    </div>
-    
+    <div class="dashboard-header d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i> Pending NSC</h2>
+        <a href="https://sites.google.com/view/mzo-reports/nsc/summary" target="_blank" class="blinking-link" style="color: hsl(60, 93%, 56%); font-size: 1rem; text-decoration: none;">More Details</a>
+      </div>
+      
     <!-- Filters Row -->
     <div class="filter-card">
       <div class="filter-title"><i class="fas fa-filter me-2"></i>Filters</div>
@@ -564,17 +616,33 @@ function applyFilters() {
   const divn = document.getElementById('divnSelect').value;
   const supp = document.getElementById('suppSelect').value;
 
+  // 1. Filter the raw data based on selected filters
   filteredData = rawData.filter(d => 
     (region === "" || d.REGION === region) &&
     (divn === "" || d.DIVN_NAME === divn) &&
     (supp === "" || d.SUPP_OFF === supp)
   );
 
-  populateFilters(filteredData); // <- repopulate based on filtered
-  updateDashboard();
-  drawTables();
+  // 2. Repopulate dropdown filters (keep earlier selections if possible)
+  populateFilters(); 
 
+  // 3. Collapse any expanded sub-rows (both card tables and tabs)
+  document.querySelectorAll('.sub-row').forEach(row => {
+    row.style.display = "none"; // hide sub-rows
+  });
+  document.querySelectorAll('.expandable-row i').forEach(icon => {
+    icon.classList.remove('fa-chevron-down');
+    icon.classList.add('fa-chevron-right');
+  });
+
+  // 4. Update KPI Cards (counts and averages)
+  updateDashboard();
+
+  // 5. Redraw all tables (1st-level views) - fresh data will be used for 2nd level dynamically
+  drawTables();
 }
+
+
 
 
     // Add option to select element
@@ -737,7 +805,7 @@ function fillTable(tableContainer, groupBy, filterFn, title) {
 
   let html = `
     <div class="card-header bg-white py-3">
-      <h5 class="mb-0"><i class="fas fa-table me-2"></i>${title} by ${groupBy.replace('_', ' ')}</h5>
+      <h5 class="mb-0"><i class="fas fa-table me-2"></i>${title}</h5>
     </div>
     <div class="table-responsive">
       <table class="table table-hover">
@@ -745,7 +813,7 @@ function fillTable(tableContainer, groupBy, filterFn, title) {
           <tr>
             <th>${groupBy.replace('_', ' ')}</th>
             <th class="text-end">Count</th>
-            <th class="text-end">Percentage</th>
+            <th class="text-end">%</th>
           </tr>
         </thead>
         <tbody>
@@ -755,41 +823,209 @@ function fillTable(tableContainer, groupBy, filterFn, title) {
   for (const key of sortedKeys) {
     const count = grouped[key];
     const percentage = ((count / total) * 100).toFixed(1);
+    const rowId = `row-${btoa(key).replace(/=/g, '')}`; // create unique id for each main row
+
     html += `
-      <tr>
-        <td>${key}</td>
+      <tr class="expandable-row" data-group="${key}" data-rowid="${rowId}" style="cursor:pointer;">
+        <td><i class="fas fa-chevron-right me-2"></i>${key}</td>
         <td class="text-end">${count}</td>
         <td class="text-end">${percentage}%</td>
+      </tr>
+      <tr id="${rowId}" class="sub-row" style="display:none; background:#f8f9fa;">
+        <td colspan="3">
+          <div id="${rowId}-subdata"></div>
+        </td>
       </tr>
     `;
   }
 
   html += "</tbody></table></div>";
   tableContainer.innerHTML = html;
+
+  // Add event listeners for toggle
+  const rows = tableContainer.querySelectorAll(".expandable-row");
+  rows.forEach(row => {
+row.addEventListener("click", function(e) {
+    e.stopPropagation(); // 🚨 Important to prevent outer collapse
+    const groupKey = this.dataset.group;
+    const rowId = this.dataset.rowid;
+    const subRow = document.getElementById(rowId);
+    const icon = this.querySelector('i');
+
+    if (subRow.style.display === "none") {
+        if (title.includes('Industrial Pending')) {
+    generateConsumerRows(groupKey, document.getElementById(`${rowId}-subdata`), groupBy, filterFn);
+  } else {
+    generateSubRows(groupKey, document.getElementById(`${rowId}-subdata`), groupBy, filterFn);
+  }
+  subRow.style.display = "";
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-down');
+    } 
+    
+    else {
+        subRow.style.display = "none";
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
+    }
+});
+
+  });
+}
+
+function generateSubRows(groupKey, container, groupBy, filterFn) {
+  const children = filteredData.filter(d => 
+    filterFn(d) && (d[groupBy] === groupKey)
+  );
+
+  const groupedByCCC = {};
+  children.forEach(d => {
+    const ccc = d['SUPP_OFF'] || 'Unknown CCC';
+    groupedByCCC[ccc] = (groupedByCCC[ccc] || 0) + 1;
+  });
+
+  const total = children.length;
+  let html = `
+<table class="table table-sm mb-0">
+  <thead class="table-light">
+    <tr>
+      <th>CCC Name</th>
+      <th class="text-end">Count</th>
+      <th class="text-end">%</th>
+    </tr>
+  </thead>
+  <tbody>
+`;
+
+
+  for (const [ccc, count] of Object.entries(groupedByCCC)) {
+    const percentage = ((count / total) * 100).toFixed(1);
+    html += `
+      <tr>
+        <td>${ccc}</td>
+        <td class="text-end">${count}</td>
+        <td class="text-end">${percentage}%</td>
+      </tr>
+    `;
+  }
+
+  html += `</tbody></table>`;
+
+  container.innerHTML = html;
+}
+
+function generateConsumerRows(groupKey, container, groupBy, filterFn) {
+  const consumers = filteredData.filter(d => 
+    filterFn(d) && (d[groupBy] === groupKey)
+  );
+
+  if (consumers.length === 0) {
+    container.innerHTML = `<div class="text-center text-muted p-2">No consumer data found.</div>`;
+    return;
+  }
+
+  let html = `
+    <table class="table table-sm table-bordered mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>APPL NO</th>
+          <th>NAME</th>
+          <th>PHONE NO</th>
+          <th>COLL DATE</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  consumers.forEach(d => {
+    html += `
+      <tr>
+        <td>${d.APPL_NO || '-'}</td>
+        <td>${d.NAME || '-'}</td>
+        <td>${d.PHONE_NO || '-'}</td>
+        <td>${d.COLL_DATE || '-'}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+
+  container.innerHTML = html;
+}
+
+function generateSubRowsForTabs(groupKey, container, groupByKey) {
+  let children = [];
+
+  if (groupByKey === 'PoleType') {
+    // Special handling for Pole/Non-Pole case
+    if (groupKey === 'Pole Cases') {
+      children = filteredData.filter(d => (d.NO_OF_POLES || "").trim() !== "" && (d.NO_OF_POLES !== "0"));
+    } else if (groupKey === 'Non-Pole Cases') {
+      children = filteredData.filter(d => (d.NO_OF_POLES || "").trim() === "" || (d.NO_OF_POLES === "0"));
+    }
+  } else {
+    // Normal case
+    children = filteredData.filter(d => (d[groupByKey] || 'Not Specified') === groupKey);
+  }
+
+  const groupedByCCC = {};
+  children.forEach(d => {
+    const ccc = d['SUPP_OFF'] || 'Unknown CCC';
+    groupedByCCC[ccc] = (groupedByCCC[ccc] || 0) + 1;
+  });
+
+  const total = children.length;
+  let html = `
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>CCC Name</th>
+          <th class="text-end">Count</th>
+          <th class="text-end">%</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  for (const [ccc, count] of Object.entries(groupedByCCC)) {
+    const percent = total ? ((count / total) * 100).toFixed(1) : 0;
+    html += `
+      <tr>
+        <td>${ccc}</td>
+        <td class="text-end">${count}</td>
+        <td class="text-end">${percent}%</td>
+      </tr>
+    `;
+  }
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
 }
 
 
 
+
 document.getElementById('totalPendingCard').onclick = () => 
-  showTable('totalPendingCard', 'DIVN_NAME', d => true, 'Total Pending');
+  showTable('totalPendingCard', 'DIVN_NAME', d => true, 'Pending NSC (Division Wise)');
 
 document.getElementById('nonPoleCard').onclick = () => 
   showTable('nonPoleCard', 'DIVN_NAME', d => {
     const poles = d.NO_OF_POLES || "";
     return poles.trim() === "" || poles === "0";
-  }, 'Non-Pole Cases');
+  }, 'Non-Pole Case (Division Wise)');
 
 document.getElementById('poleCard').onclick = () => 
   showTable('poleCard', 'DIVN_NAME', d => {
     const poles = d.NO_OF_POLES || "";
     return poles.trim() !== "" && poles !== "0";
-  }, 'Pole Cases');
+  }, 'Pole Case (Division Wise)');
 
 document.getElementById('industrialPendingCard').onclick = () => 
   showTable('industrialPendingCard', 'SUPP_OFF', d => {
     const connClass = (d.CONN_CLASS || "").trim().toUpperCase();
     return connClass === "I";
-  }, 'Industrial Cases');
+  }, 'Industrial Pending (CCC Wise)');
+
 
     // Filter change event handler
     document.getElementById('regionSelect').onchange = applyFilters;
@@ -799,7 +1035,7 @@ document.getElementById('suppSelect').onchange = applyFilters;
 
     // Draw charts for data visualization
     function drawTables() {
-  const chartColors = { }; // no longer needed but keeping for future if styles needed
+  const chartColors = {}; // still unused, keeping for future
   
   const groupData = (key, defaultValue = 'Not Specified') => {
     const map = {};
@@ -812,7 +1048,46 @@ document.getElementById('suppSelect').onchange = applyFilters;
     });
     return map;
   };
-  
+  const generateTable = (dataObj, header1, header2, groupByKey) => {
+  const total = Object.values(dataObj).reduce((sum, val) => sum + val, 0);
+
+  let html = `
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>${header1}</th>
+            <th class="text-end">${header2}</th>
+            <th class="text-end">%</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  let index = 0;
+  for (const [key, value] of Object.entries(dataObj)) {
+    const percent = total ? ((value / total) * 100).toFixed(1) : 0;
+    const rowId = `tabrow-${btoa(key + index).replace(/=/g, '')}`; // unique id
+
+    html += `
+      <tr class="expandable-row" data-group="${key}" data-rowid="${rowId}" data-groupby="${groupByKey}" style="cursor:pointer;">
+        <td><i class="fas fa-chevron-right me-2"></i>${key}</td>
+        <td class="text-end">${value}</td>
+        <td class="text-end">${percent}%</td>
+      </tr>
+      <tr id="${rowId}" class="sub-row" style="display:none; background:#fff3cd;">
+        <td colspan="3">
+          <div id="${rowId}-subdata"></div>
+        </td>
+      </tr>
+    `;
+    index++;
+  }
+
+  html += `</tbody></table></div>`;
+  return html;
+};
+
   const delayMap = {};
   filteredData.forEach(d => {
     const range = d.DelayRange || 'No Delay Data';
@@ -832,75 +1107,69 @@ document.getElementById('suppSelect').onchange = applyFilters;
 
   const duareData = groupData('IS_DUARE_SARKAR', 'Not Specified');
   const woData = groupData('WO_ISSUED', 'Not Issued');
-
   const classData = groupData('CONN_CLASS', 'Not Specified');
 
-
-
-  // Helper to generate HTML table
-  const generateTable = (dataObj, header1, header2) => {
-  const total = Object.values(dataObj).reduce((sum, val) => sum + val, 0);
-
-  let html = `
-    <div class="table-responsive">
-      <table class="table table-hover table-striped">
-        <thead>
-          <tr>
-            <th>${header1}</th>
-            <th class="text-end">${header2}</th>
-            <th class="text-end">Percentage</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
-
-  for (const [key, value] of Object.entries(dataObj)) {
-    const percent = total ? ((value / total) * 100).toFixed(1) : 0;
-    html += `
-      <tr>
-        <td>${key}</td>
-        <td class="text-end">${value}</td>
-        <td class="text-end">${percent}%</td>
-      </tr>
-    `;
-  }
-
-  html += `</tbody></table></div>`;
-  return html;
-};
-
-
-  // Insert tables into respective containers
+  // --- Generate tables with correct groupByKey ---
   document.getElementById('delay').querySelector('.chart-container').innerHTML = generateTable(
-    Object.fromEntries(sortedDelay.map(([k,v]) => [k, v.count])), 
-    'Delay Range', 
-    'Count'
+    Object.fromEntries(sortedDelay.map(([k, v]) => [k, v.count])), 
+    'Range', 
+    'Count',
+    'DelayRange' // 👈 important
   );
 
   document.getElementById('pole-data').querySelector('.chart-container').innerHTML = generateTable(
     poleData,
     'Type',
-    'Count'
+    'Count',
+    'PoleType' // 👈 dummy (since not actual column)
   );
 
   document.getElementById('duare').querySelector('.chart-container').innerHTML = generateTable(
     duareData,
-    'Duare Sarkar',
-    'Count'
+    'DS?',
+    'Count',
+    'IS_DUARE_SARKAR'
   );
 
   document.getElementById('wo').querySelector('.chart-container').innerHTML = generateTable(
     woData,
-    'WO Issued Status',
-    'Count'
+    'Issued?',
+    'Count',
+    'WO_ISSUED'
   );
 
   document.getElementById('classwise').querySelector('.chart-container').innerHTML = generateTable(
-  classData,
-  'Connection Class',
-  'Count'
-);
+    classData,
+    'Class',
+    'Count',
+    'CONN_CLASS'
+  );
+
+  // --- Attach expandable click listeners after building tables ---
+  document.querySelectorAll('.expandable-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const groupKey = this.dataset.group;
+      const rowId = this.dataset.rowid;
+      const groupByKey = this.dataset.groupby; // read from attribute
+
+      const subRow = document.getElementById(rowId);
+      const icon = this.querySelector('i');
+
+      if (subRow.style.display === "none") {
+        generateSubRowsForTabs(groupKey, document.getElementById(`${rowId}-subdata`), groupByKey);
+        subRow.style.display = "";
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-down');
+      } else {
+        subRow.style.display = "none";
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
+      }
+    });
+  });
 }
+
 
     
     document.addEventListener('DOMContentLoaded', () => {
